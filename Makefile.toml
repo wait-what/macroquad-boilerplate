@@ -1,0 +1,66 @@
+# Run project for debugging
+
+[tasks.run]
+script_runner = "@shell"
+script = '''
+mold -run cargo run # shell2batch: cargo run
+'''
+
+# Benchmark with Mangohud
+
+[tasks.mangohud]
+script_runner = "@shell"
+script = '''
+vblank_mode=0 mold -run cargo run --release
+'''
+
+# Release
+
+[tasks.release_build_linux]
+script_runner = "@shell"
+script = '''
+mold -run cargo build --release --target x86_64-unknown-linux-gnu # shell2batch: cargo build --release --target x86_64-unknown-linux-gnu
+'''
+
+[tasks.release_build_windows]
+script_runner = "@shell"
+script = '''
+cargo build --release --target x86_64-pc-windows-gnu
+'''
+
+[tasks.release_copy_binaries]
+script_runner = "@shell"
+script = '''
+mkdir -p release
+rm -f release/*
+
+cp target/x86_64-unknown-linux-gnu/release/"$CARGO_MAKE_CRATE_NAME" release/"$CARGO_MAKE_CRATE_NAME"-"$CARGO_MAKE_CRATE_VERSION"-linux
+cp target/x86_64-pc-windows-gnu/release/"$CARGO_MAKE_CRATE_NAME".exe release/"$CARGO_MAKE_CRATE_NAME"-"$CARGO_MAKE_CRATE_VERSION"-windows.exe
+'''
+
+[tasks.release_strip_symbols]
+ignore_errors = true # Ignore if binutils is missing
+script_runner = "@shell"
+script = '''
+strip release/*
+'''
+
+[tasks.release_compress_linux]
+ignore_errors = true # Ignore if upx is missing
+script_runner = "@shell"
+script = '''
+upx --best --lzma release/"$CARGO_MAKE_CRATE_NAME"-"$CARGO_MAKE_CRATE_VERSION"-linux
+'''
+
+[tasks.release]
+dependencies = [
+    "release_build_linux",
+    "release_build_windows",
+    "release_copy_binaries",
+    "release_strip_symbols",
+    "release_compress_linux"
+]
+script_runner = "@shell"
+script = '''
+du -sh release/*
+'''
